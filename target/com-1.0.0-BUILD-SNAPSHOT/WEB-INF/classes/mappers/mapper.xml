@@ -1,0 +1,103 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="board">
+	<resultMap type="com.com.com.BoardDto" id="reMap">
+		<result column="seq" property="seq"/>
+		<result column="mem_name" property="memName"/>
+		<result column="mem_id" property="memId"/>
+		<result column="board_subject" property="boardSubject"/>
+		<result column="board_content" property="boardContent"/>
+		<result column="reg_date" property="regDate"/>
+		<result column="upt_date" property="uptDate"/>
+		<result column="view_cnt" property="viewCnt"/>
+	</resultMap>
+
+	<select id="select" resultMap="reMap" parameterType="map"> 
+		select 
+			seq,
+			mem_name,
+			mem_id,
+			board_subject,
+			board_content,
+			reg_date,
+			upt_date,
+			view_cnt
+		from board_study
+		where 1=1
+		<choose>
+			<when test="selectOption == 'name'">
+				and mem_name like '%'||#{keyword}||'%'
+			</when>
+			<when test="selectOption == 'id'">
+				and mem_id like '%'||#{keyword}||'%'
+			</when>
+			<when test="selectOption == 'subj'">
+				and board_subject like '%'||#{keyword}||'%'
+			</when>
+			<when test="selectOption == 'cont'">
+				and board_content like '%'||#{keyword}||'%
+				or board_subject like '%'||#{keyword}||'%'
+			</when>
+		</choose> 	
+		
+		
+		order by seq desc
+		
+	</select>
+	
+	<insert id="insert" parameterType="com.com.com.BoardDto">
+		insert into 
+			board_study(
+				seq,
+				mem_name,
+				mem_id,
+				board_subject,
+				board_content,
+				reg_date,
+				view_cnt,
+				useyn
+			)
+			values(
+				(select nvl(max(seq),0) +1 from board_study),
+				#{memName, jdbcType=VARCHAR},
+				#{memId, jdbcType=VARCHAR},
+				#{boardSubject, jdbcType=VARCHAR},
+				#{boardContent, jdbcType=VARCHAR},
+				sysdate,
+				0,
+				'Y'
+			)
+			
+	</insert>
+	
+	<select id="view" resultMap="reMap">
+		select 
+			seq,
+			mem_name,
+			mem_id,
+			board_subject,
+			board_content
+		from board_study
+		where seq = #{seq}
+	</select>
+	
+	<update id="update" parameterType="com.com.com.BoardDto" >
+		update board_study 
+		set mem_name = #{memName},
+		    mem_id = #{memId},
+		    board_subject= #{boardSubject},
+		    board_content=#{boardContent}
+		where seq = #{seq}  
+	</update>
+	
+	<delete id="delete" parameterType="int">
+		delete from board_study where seq in (
+		<foreach collection="array" item="check" separator="," >
+			#{check}
+		</foreach>
+		)
+	</delete>
+	
+	
+			
+</mapper>

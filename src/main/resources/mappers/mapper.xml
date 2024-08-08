@@ -1,0 +1,452 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="board">
+	<resultMap type="com.com.com.BoardDto" id="reMap">
+		<result column="seq" property="seq"/>
+		<result column="mem_name" property="memName"/>
+		<result column="mem_id" property="memId"/>
+		<result column="board_subject" property="boardSubject"/>
+		<result column="board_content" property="boardContent"/>
+		<result column="reg_date" property="regDate"/>
+		<result column="upt_date" property="uptDate"/>
+		<result column="view_cnt" property="viewCnt"/>
+	</resultMap>
+	
+	<resultMap type="com.com.com.FileDto" id="file">
+		<result column="file_seq" property="fileSeq"/>
+		<result column="real_name" property="realName"/>
+		<result column="save_name" property="saveName"/>
+		<result column="reg_date" property="regDate"/>
+		<result column="save_path" property="savePath"/>
+		<result column="list_seq" property="listSeq"/>
+	</resultMap>
+	
+	<resultMap type="com.com.com.approval.MemberDto" id="mem">
+		<id column="mem_id" property="memId"/>
+		<result column="mem_num" property="memNum"/>
+		<result column="password" property="password"/>
+		<result column="mem_name" property="memName"/>
+		<result column="rank" property="rank"/>
+	</resultMap>
+	
+	<resultMap type="com.com.com.approval.BoardDto" id="brd">
+		<result column="mem_id" property="memId"/>
+		<result column="b_num" property="bNum"/>
+		<result column="subject" property="subject"/>
+		<result column="content" property="content"/>
+		<result column="created_date" property="createdDate"/>
+		<result column="signed_date" property="signedDate"/>
+		<result column="signed_id" property="signedId"/>
+		<result column="signed_name" property="signedName"/>
+		<result column="signed_condition" property="signedCondition"/>
+		<association property="member" column="mem_id" javaType="com.com.com.approval.MemberDto" >
+			<id column="mem_id" property="memId"/>
+			<result column="mem_num" property="memNum"/>
+			<result column="password" property="password"/>
+			<result column="mem_name" property="memName"/>
+			<result column="rank" property="rank"/>
+		</association>
+	</resultMap>
+	
+	<resultMap type="com.com.com.approval.HistoryDto" id="his">
+		<result column="h_num" property="hNum"/>
+		<result column="signed_date" property="signedDate"/>
+		<result column="signed_condition" property="signedCondition"/>
+		<result column="signed_id" property="signedId"/>
+		<result column="b_num" property="bNum"/>
+		<association property="member" column="mem_id" javaType="com.com.com.approval.MemberDto">
+			<id column="mem_id" property="memId"/>
+			<result column="mem_num" property="memNum"/>
+			<result column="password" property="password"/>
+			<result column="mem_name" property="memName"/>
+			<result column="rank" property="rank"/>
+		</association>
+	</resultMap>
+	
+	<resultMap type="com.com.com.FoodDto" id="food">
+		<result column="id" property=""/>
+		<result column="code" property="code"/>
+		<result column="food" property="food"/>
+		<result column="good" property="good"/>
+		<result column="price" property="price"/>
+		<result column="description" property="description"/>
+	</resultMap>
+	
+	<sql id="boardSql">
+		<choose>
+			<when test="selectOption == 'name'">
+				and mem_name like '%'||#{keyword}||'%'
+			</when>
+			<when test="selectOption == 'id'">
+				and mem_id like '%'||#{keyword}||'%'
+			</when>
+			<when test="selectOption == 'subj'">
+				and board_subject like '%'||#{keyword}||'%'
+			</when>
+			<when test="selectOption == 'cont'">
+				and board_content like '%'||#{keyword}||'%
+				or board_subject like '%'||#{keyword}||'%'
+			</when>
+		</choose> 	
+		<if test="stDate != null and stDate != ''">
+			and to_char(reg_date, 'yyyy-MM-dd') between #{stDate} and #{enDate}
+		</if>
+	</sql>
+	
+	<sql id="rankSql">
+		<if test="rank == '부장'">
+			(cb.signed_condition = 'i' 
+			or  cb.signed_condition = 'o' 
+			or cb.signed_condition = 'r')
+			 or (cb.mem_id = #{id, jdbcType=VARCHAR})
+				 
+		</if>
+		<if test="rank == '과장'">
+			 (cb.signed_condition = 'w') 
+			 or (cb.mem_id =  #{id, jdbcType=VARCHAR}) 
+			 or (cb.signed_condition = 'i' and cb.signed_id = #{id, jdbcType=VARCHAR})
+			 or (cb.signed_condition = 'r' and cb.signed_id = #{id, jdbcType=VARCHAR})
+		</if>
+		<if test="rank == '사원' or rank == '대리'">
+			 cb.mem_id = #{id, jdbcType=VARCHAR}
+		</if>
+	</sql>
+	<sql id="searchSql">
+		<choose>
+			<when test="select == 'memId'">
+				and (select cm.mem_id from chj_member cm where cm.mem_name like '%'||#{text}||'%')
+			</when>
+			<when test="select == 'signedId'">
+				and (select cb.signed_id from chj_member cm where cm.mem_name like '%'||#{text}||'%')
+			</when>
+			<when test="select == 'subCon'">
+				and cb.subject like '%'||#{text}||'%' 
+				or cb.content like '%'||#{text}||'%'
+			</when>
+		</choose>
+		<choose>
+			<when test="condition == 'total'">
+				and 1=1
+			</when>
+			<when test="condition == 't'">
+				and cb.signed_condition = 't'
+			</when>
+			<when test="condition == 'w'">
+				and cb.signed_condition = 'w'
+			</when>
+			<when test="condition == 'i'">
+				and cb.signed_condition = 'i'
+			</when>
+			<when test="condition == 'o'">
+				and cb.signed_condition = 'o'
+			</when>
+			<when test="condition == 'r'">
+				and cb.signed_condition = 'r'
+			</when>
+		</choose>
+	</sql>
+	
+	<select id="foodSelect" resultMap="food">
+		select
+			id,
+			food,
+			code,
+			good,
+			price,
+			description
+		from react_exam_data
+	</select>
+
+	<select id="select" resultMap="reMap" parameterType="map"> 
+		select 	
+				rm, 
+			  	seq,
+				mem_name,
+				mem_id,
+				board_subject,
+				board_content,
+				reg_date, 
+				upt_date, 
+				view_cnt
+		from (
+			select 
+				row_number() over(order by seq desc) rm,
+				seq,
+				mem_name,
+				mem_id,
+				board_subject,
+				board_content,
+				reg_date, 
+				upt_date, 
+				view_cnt
+			from board_study
+			where 1=1
+			<include refid="boardSql"></include>
+			)
+		where rm between ((#{curPage}-1) * #{listSize})+1 and #{curPage}*#{listSize}
+		
+	</select>
+	
+	<select id="count" resultType="int" parameterType="map">
+		select 
+			count(seq) 
+		from 
+			board_study
+		where 1=1
+		<include refid="boardSql"></include> 
+	</select>
+	
+	
+	<insert id="insert" parameterType="com.com.com.BoardDto">
+		insert into
+		board_study(
+			seq,
+			mem_name,
+			mem_id,
+			board_subject,
+			board_content,
+			reg_date,
+			view_cnt,
+			useyn)
+		values(
+			(select nvl(max(seq),0)+1 from board_study),
+			#{memName},
+			#{memId},
+			#{boardSubject},
+			#{boardContent},
+			sysdate,
+			0,
+			'Y')
+			
+	</insert>
+	
+	<insert id="fileUplode" parameterType="hashMap">
+		insert into file_study_table(
+			file_seq,
+			real_name,
+			save_name,
+			reg_date,
+			save_path,
+			list_seq)
+		values(
+			(select nvl(max(file_seq),0) +1 from file_study_table),
+			#{realName},
+			#{saveName},
+			sysdate,
+			#{savePath},
+			#{listSeq}
+		)
+		
+	</insert>
+	
+	<select id="view" resultMap="reMap">
+		select 
+			seq,
+			mem_name,
+			mem_id,
+			board_subject,
+			board_content
+		from board_study
+		where seq = #{seq}
+	</select>
+	
+	<update id="update" parameterType="com.com.com.BoardDto" >
+		update board_study 
+		set mem_name = #{memName},
+		    mem_id = #{memId},
+		    board_subject= #{boardSubject},
+		    board_content=#{boardContent}
+		where seq = #{seq}  
+	</update>
+	
+	<delete id="delete" parameterType="int">
+		delete from board_study where seq in (
+		<foreach collection="array" item="check" separator="," >
+			#{check}
+		</foreach>
+		)
+	</delete>
+	
+	<select id="selectSeq" resultType="int">
+		select max(seq) from board_study
+	</select>
+	
+	<select id="fileSelect" resultMap="file"  parameterType="map">
+		select
+			file_seq,
+			real_name,
+			save_name,
+			save_path,
+			reg_date,
+			list_seq
+		from file_study_table
+		 where list_seq = #{seq}
+	</select>
+	
+	<select id="download" resultType="map"  parameterType="map">
+		select 
+			real_name,
+			save_name,
+			save_path
+		from file_study_table
+		where file_seq = #{fileSeq}
+	</select>
+	
+<!-- 여기부터 전자결재시스템 -->		
+
+	<select id="login" resultMap="mem">
+		select 
+			mem_num,
+			mem_id,
+			password,
+			mem_name,
+			rank
+		from chj_member
+		where mem_id = #{memId} 
+			and password = #{password}
+		
+	</select>
+	
+	<select id="loginCheck" resultMap="mem">
+		select 
+			mem_id
+		from chj_member
+		where mem_id = #{memId}
+	</select>
+	
+	<select id="insertNum" resultType="int">
+		select nvl(max(b_num),0)+1 from chj_board
+	</select>
+	
+	<insert id="signedInsert" parameterType="map">
+		insert into chj_board(
+			b_num,
+			mem_id,
+			subject,
+			content, 
+			created_date,
+			signed_date,
+			signed_id,
+			signed_condition
+		)
+		values (
+			(select nvl(max(b_num),0)+1 from chj_board),
+			#{memId},
+			#{subject},
+			#{content},
+			to_char(sysdate, 'yyyy.MM.dd'),
+			<choose>
+				<when test="signedId != null and signedId != ''">
+					to_char(sysdate, 'yyyy.MM.dd'),
+					#{signedId},
+				</when>
+				<otherwise>
+					null,
+					null,
+				</otherwise>
+			</choose>
+			#{signedCondition}
+		)
+		
+	</insert>
+	
+	<!-- list 조회 -->
+	<select id="boardSelect" resultMap="brd" parameterType="map">
+		select 
+		    b_num,
+		    mem_id,
+		    subject,
+		   	content,
+		    created_date,
+		    signed_date,
+		    signed_id,
+		    signed_condition,
+		    mem_name,
+		    signed_name,
+		    rank
+		from (select 
+			    b_num,
+			    cb.mem_id,
+			    subject,
+			   	content,
+			    created_date,
+			    signed_date,
+			    signed_id,
+			    signed_condition,
+			   (select mem_name from chj_member cm where cm.mem_id = cb.mem_id) mem_name,
+			   (select mem_name from chj_member cm where cm.mem_id = cb.signed_id) signed_name,
+			    (select rank from chj_member cm where cm.mem_id = cb.mem_id) rank
+			from chj_board cb
+			where (<include refid="rankSql"></include>)
+			<include refid="searchSql"></include>
+			)
+		order by b_num
+	</select>	
+	
+	<!-- view 조회 -->	
+	<select id="viewSelect" resultMap="brd" parameterType="int">
+		select 
+			b.b_num,
+			b.subject,
+			b.content,
+			b.mem_id,
+			m.mem_name,
+			b.signed_id,
+			b.signed_condition
+		from chj_board b, chj_member m
+		where b.mem_id = m.mem_id 
+		and b_num = #{bNum}
+	</select>
+	
+	<!-- history 조회 -->
+	<select id="selectHistory" resultMap="his" parameterType="int">
+		select 
+			h.h_num,
+			h.signed_date,
+			h.signed_condition,
+			h.signed_id,
+			m.mem_name,
+			h.b_num
+		from chj_history h, chj_member m
+		where h.signed_id = m.mem_id(+)
+		and h.b_num = #{bNum}
+		order by h.h_num
+	</select>
+	
+	<!-- history insert -->
+	<insert id="insertHistory" parameterType="com.com.com.approval.HistoryDto">
+		insert into chj_history
+			(h_num,
+			 signed_date,
+			 signed_condition,
+			 signed_id,
+			 b_num)
+		 values (
+		 	(select nvl(max(h_num),0)+1 from chj_history where b_num = #{bNum}),
+		 	to_char(sysdate, 'yyyy.MM.dd'),
+		 	#{signedCondition},
+		 	#{signedId},	
+		 	#{bNum}
+		 )
+		 
+	</insert>
+	
+	<!-- update -->
+	<update id="updateT" parameterType="map">
+		update chj_board
+		set subject = #{subject},
+			content = #{content},
+			signed_condition = #{signedCondition},
+			created_date = to_char(sysdate, 'yyyy.MM.dd')
+		where (signed_condition = 't' or signed_condition = 'w')
+		and b_num = #{bNum}
+	</update>
+	
+	<update id="conditionUpdate" parameterType="map">
+		update chj_board
+		set signed_date = to_char(sysdate, 'yyyy.MM.dd'),
+			signed_condition = #{signedCondition},
+			signed_id = #{signedId}
+		where b_num = #{bNum}
+	</update>
+</mapper>
